@@ -1,6 +1,15 @@
-from yfinance import Ticker
+from dotenv import load_dotenv
+load_dotenv()
+
+from yfinance import Ticker  #Yahoo Finance API 
+from finnhub import Finnhub  #Finnhub.ai
+import praw                  #Reddit API
 import pandas as pd
 import numpy as np
+
+
+
+from tools import annualized_std_dev
 
 
 
@@ -19,11 +28,7 @@ tickers = ["AAPL", "GOOGL", "MSFT"]
 for symbol in tickers:
     data = Ticker(symbol).history(start="2023-01-01")
     print(f"{symbol}: {data.shape[0]} days of data")
-    close = data['Close']
-    returns = close.pct_change()
-    std_dev = returns.std()
-    print(f"{symbol} std dev: {std_dev}")
-    ann_std_dev = std_dev * np.sqrt(252)
+    ann_std_dev = annualized_std_dev(data, 'Close')
     print(f"{symbol} annualized std dev: {ann_std_dev}")
 
 # You can also specify additional parameters

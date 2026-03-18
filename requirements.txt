@@ -1,0 +1,7 @@
+# Algo_Trader – install on VM: pip install -r requirements.txt
+pandas>=2.0.0
+numpy>=1.24.0
+yfinance>=0.2.0
+finnhub-python>=1.0.0
+praw>=7.0.0
+python-dotenv>=1.0.0
