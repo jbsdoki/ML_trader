@@ -1,7 +1,19 @@
-# Algo_Trader – install on VM: pip install -r requirements.txt
+# ML_Trader — install in conda env: pip install -r requirements.txt
+# Core
 pandas>=2.0.0
 numpy>=1.24.0
+python-dotenv>=1.0.0
+PyYAML>=6.0.0
+
+# Data ingestion
 yfinance>=0.2.0
 finnhub-python>=1.0.0
-praw>=7.0.0
-python-dotenv>=1.0.0
+alpaca-py>=0.21.0
+# newsapi-python>=0.2.7 #manual install this package "python -m pip install "newsapi-python>=0.2.7"
+
+
+# Social / optional feeds 
+praw>=7.0.0 # Reddit API
+
+# Modeling (used under models/)
+xgboost>=2.0.0

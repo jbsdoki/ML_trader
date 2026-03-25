@@ -1,0 +1,30 @@
+# Example ingest configuration for: python scripts/run_ingest.py --config config.yaml
+#
+# PyYAML: https://pyyaml.org/wiki/PyYAMLDocumentation
+
+symbols:
+  - AAPL
+  - MSFT
+
+start: "2025-01-01"
+end: "2025-03-18"
+
+# Bar size for yfinance and Alpaca (Alpaca supports a subset; see pipelines/ingest_pipeline.py)
+bar_interval: "1d"
+
+# Omit ``sources`` to enable all four; or restrict e.g. [finnhub, yfinance]
+sources:
+  - finnhub
+  - newsapi
+  - yfinance
+  - alpaca
+
+# Optional: helps NewsAPI recall beyond the raw ticker (per-symbol query still uses ticker)
+# newsapi_extra_query: "Apple"
+# Optional: free/developer tiers usually cap total results at 100.
+# Keeping max_pages at 1 prevents page-2 "maximumResultsReached" errors.
+# newsapi_page_size: 100
+# newsapi_max_pages: 1
+
+# Optional Alpaca market data feed (depends on your subscription)
+# alpaca_feed: "iex"

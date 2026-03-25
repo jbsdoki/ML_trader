@@ -1,5 +1,5 @@
 # model_factory.py
-from models.xgboost_model import XGBoostModel
+from models.xgboost import XGBoostModel
 
 MODEL_REGISTRY = {
     "xgboost": XGBoostModel,
