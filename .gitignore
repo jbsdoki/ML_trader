@@ -1,5 +1,6 @@
 .env
 __pycache__/
 *.pyc
+
 # Local SQLite + runtime data (set ML_TRADER_DATA_DIR on VPS to another path if you prefer)
 data_store/

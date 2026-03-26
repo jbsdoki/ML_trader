@@ -8,8 +8,6 @@ Useful references
 -----------------
 - ``CREATE TABLE``:
   https://www.sqlite.org/lang_createtable.html
-- Primary keys and ``INTEGER PRIMARY KEY``:
-  https://www.sqlite.org/lang_createtable.html#rowid_and_the_integer_primary_key
 - ``CREATE INDEX``:
   https://www.sqlite.org/lang_createindex.html
 - ``INSERT OR IGNORE`` / conflict resolution:
@@ -72,6 +70,25 @@ _SCHEMA_STATEMENTS: tuple[str, ...] = (
     CREATE INDEX IF NOT EXISTS idx_bars_symbol_interval_time
     ON bars (symbol, bar_interval, bar_ts);
     """,
+    """
+    CREATE TABLE IF NOT EXISTS article_sentiment (
+        dedupe_key TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        score REAL,
+        prob_pos REAL,
+        prob_neg REAL,
+        prob_neutral REAL,
+        scored_at TEXT,
+        text_hash TEXT,
+        error TEXT,
+        PRIMARY KEY (dedupe_key, model_id),
+        FOREIGN KEY (dedupe_key) REFERENCES articles(dedupe_key)
+    );
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_article_sentiment__model_id
+    ON article_sentiment (model_id);
+    """
 )
 
 
@@ -79,9 +96,10 @@ def init_schema(conn: sqlite3.Connection) -> None:
     """
     Apply all DDL statements idempotently (safe to call on every app start).
 
-    Creates ``articles`` (one row per unique news item) and ``bars`` (one row
-    per OHLCV bar). Composite primary key on ``bars`` prevents duplicate bars
-    for the same vendor, symbol, interval, and bar open time.
+    Creates ``articles`` (one row per unique news item) ``bars`` (one row
+    per OHLCV bar) and article_sentiment (one row per article and model). 
+    Composite primary key on ``bars`` prevents duplicate bars for the same 
+    vendor, symbol, interval, and bar open time.
     """
     cur = conn.cursor()
     for stmt in _SCHEMA_STATEMENTS:

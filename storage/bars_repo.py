@@ -229,3 +229,55 @@ def fetch_bars_frame(
         q += f" LIMIT {int(limit)}"
 
     return pd.read_sql_query(q, conn, params=params)
+
+
+def _bar_ts_bound_iso(value: Any) -> str:
+    """Normalize a date bound to UTC ISO-8601 for ``bars.bar_ts`` comparisons."""
+    t = pd.Timestamp(value)
+    if t is pd.NaT:
+        raise ValueError("Invalid bar_ts bound.")
+    if t.tzinfo is None:
+        t = t.tz_localize(timezone.utc)
+    else:
+        t = t.tz_convert(timezone.utc)
+    return t.isoformat()
+
+
+def fetch_bars_multi_symbol_frame(
+    conn: sqlite3.Connection,
+    *,
+    symbols: list[str],
+    bar_interval: str,
+    source_api: str | None = None,
+    bar_ts_start: str | None = None,
+    bar_ts_end: str | None = None,
+) -> pd.DataFrame:
+    """
+    Load bars for multiple symbols (same interval), optionally one vendor and time bounds.
+    """
+    cleaned = [x.strip().upper() for x in symbols if x and str(x).strip()]
+    if not cleaned:
+        return pd.DataFrame()
+
+    placeholders = ",".join(["?"] * len(cleaned))
+    q = f"""
+        SELECT * FROM bars
+        WHERE symbol IN ({placeholders}) AND bar_interval = ?
+    """
+    params: list[Any] = list(cleaned)
+    params.append(bar_interval.strip().lower())
+
+    if source_api:
+        q += " AND source_api = ?"
+        params.append(source_api.strip().lower())
+
+    if bar_ts_start:
+        q += " AND bar_ts >= ?"
+        params.append(_bar_ts_bound_iso(bar_ts_start))
+
+    if bar_ts_end:
+        q += " AND bar_ts <= ?"
+        params.append(_bar_ts_bound_iso(bar_ts_end))
+
+    q += " ORDER BY symbol ASC, bar_ts ASC"
+    return pd.read_sql_query(q, conn, params=params)

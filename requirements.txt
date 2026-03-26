@@ -15,5 +15,12 @@ alpaca-py>=0.21.0
 # Social / optional feeds 
 praw>=7.0.0 # Reddit API
 
+# Features (NYSE session labels: features/nyse_session.py)
+exchange_calendars>=4.5.0
+
 # Modeling (used under models/)
 xgboost>=2.0.0
+
+# Sentiment (FinBERT in sentiment/finbert_scorer.py)
+torch>=2.0.0
+transformers>=4.36.0

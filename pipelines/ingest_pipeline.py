@@ -277,8 +277,7 @@ def _ingest_yfinance_bars(
     Download OHLCV via yfinance and upsert into ``bars``.
 
     **Note:** yfinance ``end`` is **exclusive**. We pass ``end + 1 calendar day`` so the
-    CLI ``--end`` date behaves **inclusive**, matching Finnhub/NewsAPI date windows.
-    See https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.history.html
+    CLI ``--end`` date behaves **inclusive**, matching Finnhub/NewsAPI date windows
     """
     from data_retrieval.yfinance_ingest import fetch_ohlcv
     from storage.bars_repo import upsert_bars
