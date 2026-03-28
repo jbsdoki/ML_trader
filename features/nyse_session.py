@@ -11,11 +11,45 @@ from typing import Any
 
 import exchange_calendars as xcals
 import pandas as pd
+from exchange_calendars.errors import RequestedSessionOutOfBounds
 
 
 @lru_cache(maxsize=1)
 def _xnys_calendar():
     return xcals.get_calendar("XNYS")
+
+
+def _naive_session_label(session_label: Any) -> pd.Timestamp:
+    """XNYS session index: timezone-naive midnight (calendar date in exchange_calendars)."""
+    t = pd.Timestamp(session_label)
+    if t.tzinfo is not None:
+        t = pd.Timestamp(t.tz_convert("UTC").date())
+    return pd.Timestamp(t.date()).normalize()
+
+
+@lru_cache(maxsize=4096)
+def nyse_sentiment_window_bounds_for_target_session(session_label: Any) -> tuple[pd.Timestamp | None, pd.Timestamp]:
+    """
+    Bounds on ``published_at`` (UTC) for features frozen at **NYSE open** of target session *T*.
+
+    Include articles with ``session_close(T-1) <= published_at < session_open(T)``.
+    If there is no prior session in the calendar, returns ``(None, upper)`` so only
+    ``published_at < session_open(T)`` applies.
+
+    Returns
+    -------
+    lower_inclusive, upper_exclusive
+        Both timezone-aware UTC (from ``exchange_calendars``).
+    """
+    cal = _xnys_calendar()
+    t = _naive_session_label(session_label)
+    upper = cal.session_open(t)
+    try:
+        prev = cal.previous_session(t)
+    except RequestedSessionOutOfBounds:
+        return None, upper
+    lower = cal.session_close(prev)
+    return lower, upper
 
 
 def nyse_session_label_for_instant(ts: Any) -> pd.Timestamp:

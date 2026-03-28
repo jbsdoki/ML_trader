@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """
-Build a daily table: OHLC bars + NYSE-session sentiment aggregates (left join).
+Build a daily table: OHLC bars + sentiment aggregates (left join).
+
+Default sentiment uses articles from **prior session close through before
+target session open** (NYSE), so overnight / post-close news rolls into the
+next session's bar row. Use ``--sentiment-mode article_session`` for the
+legacy same-calendar-session bucket.
 
 Example::
 
@@ -54,6 +59,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bar-start", type=str, default=None, help="Lower bound bars.bar_ts")
     parser.add_argument("--bar-end", type=str, default=None, help="Upper bound bars.bar_ts")
     parser.add_argument(
+        "--sentiment-mode",
+        type=str,
+        choices=("open_cutoff", "article_session"),
+        default="open_cutoff",
+        help="open_cutoff: close(T-1)<=pub<open(T); article_session: bucket by article day",
+    )
+    parser.add_argument(
         "--out",
         type=Path,
         default=None,
@@ -95,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
         published_end=args.published_end,
         bar_ts_start=args.bar_start,
         bar_ts_end=args.bar_end,
+        sentiment_mode=args.sentiment_mode,
     )
     conn.close()
 
