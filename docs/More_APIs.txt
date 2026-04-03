@@ -1,0 +1,67 @@
+SEC filings (earnings reports, 10-K, 10-Q, 8-K)
+Your current sources give you news articles and price data, but not the actual company filings that often drive the biggest moves.
+SEC EDGAR API — Completely free, no API key needed, run by the government. It provides submissions history by filer and XBRL data from financial statements including 10-Q, 10-K, 8-K, 20-F and their variants, updated throughout the day in real time as submissions are disseminated SEC. This is where earnings reports actually live. You can pull the raw text of any filing and run it through your sentiment model. The Python library edgartools or sec-edgar-downloader makes this easy.
+
+API docs: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
+Python library: pip install edgartools or pip install sec-edgar-downloader
+
+Financial Modeling Prep (FMP) — Excels at fundamental data, provides SEC EDGAR data with historical data going back 30+ years for major stocks, including calculated financial ratios. The free tier gives 250 requests per day Kyle Redelinghuys. This is more convenient than raw EDGAR because they've already parsed the filings into structured JSON with revenue, earnings, margins, etc.
+
+https://financialmodelingprep.com/
+
+
+Social media sentiment (Reddit, StockTwits)
+Your current sources cover news but not retail investor chatter, which can move stocks — especially smaller caps and meme stocks.
+Reddit via PRAW — The Python Reddit API Wrapper gives you access to r/wallstreetbets, r/investing, r/stocks, r/options, and r/stockmarket. Free, just needs a Reddit account and API credentials. The posts are noisy but can be extremely predictive for momentum-driven retail names. pip install praw.
+
+https://praw.readthedocs.io/
+
+StockTwits — A social platform specifically for traders. Posts are often self-tagged as bullish or bearish by the users themselves, which gives you free sentiment labels without needing to run inference. Their API is free. You can also access it through FinNLP's Stocktwits_Streaming class that you're likely already familiar with from the FinNLP library.
+
+https://api.stocktwits.com/developers
+
+
+Macroeconomic data
+Individual stock sentiment is useful, but macro conditions affect everything. Interest rate decisions, inflation data, and employment numbers move the entire market.
+FRED (Federal Reserve Economic Data) — This is the gold standard for US macroeconomic data. Thousands of time series including Fed funds rate, CPI, unemployment, GDP, yield curves, money supply, and more. Completely free. The fredapi Python library lets you pull any series in one line. These can be powerful features — for example, your model might learn that positive stock sentiment matters less when the yield curve is inverted.
+
+https://fred.stlouisfed.org/
+Python library: pip install fredapi
+
+
+Alternative price data
+Polygon.io — Free tier gives you 5 API calls per minute with end-of-day data, delayed quotes, and access to historical aggregates. Their data quality is very high and they cover stocks, options, forex, and crypto. The paid tiers are expensive but the free tier is enough for daily-frequency strategies.
+
+https://polygon.io/
+
+Alpha Vantage — A NASDAQ official data vendor. The free tier is limited to 25 calls per day Kyle Redelinghuys, which is tight but workable if you're only tracking a small watchlist. They provide OHLCV, technical indicators (computed server-side so you don't have to calculate them yourself), and some fundamental data.
+
+https://www.alphavantage.co/
+
+
+Global events and news beyond finance
+GDELT (Global Database of Events, Language, and Tone) — Updates its database every fifteen minutes, monitors global events in near real-time, and applies NLP to identify events, actors, and tones within news content Webz. It's free and academic. It covers geopolitical events, protests, natural disasters — anything that might indirectly affect markets. The data is massive (billions of records) and requires some work to filter down to financially relevant events, but it captures signals that finance-specific APIs miss entirely.
+
+https://www.gdeltproject.org/
+Python library: pip install gdeltdoc
+
+
+Earnings call transcripts
+Earnings calls are where CEOs and CFOs speak directly about company performance. The tone, word choice, and specific language used on these calls is highly predictive — a CEO who sounds uncertain or defensive on a call often precedes a stock decline.
+Seeking Alpha — Has earnings call transcripts. Finnhub also provides some earnings-related data. The transcripts themselves are harder to get for free at scale, but you can access them through Finnhub's earnings endpoint or scrape Seeking Alpha (though they do try to block scraping).
+EarningsCall — A newer API specifically for earnings transcripts. Limited free tier but useful if this becomes an important signal for you.
+
+https://earningscall.biz/
+
+
+Google Trends
+Not an API in the traditional sense, but the pytrends Python library lets you pull Google search interest for any term over time. Search volume for a company name or ticker often spikes before or during major price moves. It's a rough proxy for retail attention. Completely free.
+
+pip install pytrends
+
+
+What I'd actually add to your pipeline first:
+If I had to pick three from this list to add next, in order of likely value:
+First, FRED. Macro data is easy to integrate (just a few time series to pull), rarely noisy, and gives your model important context that pure stock-level sentiment misses. A few key series — Fed funds rate, VIX (which you can also get from yfinance), 10-year treasury yield, CPI — can meaningfully improve predictions.
+Second, SEC EDGAR or FMP for earnings data. Knowing when a company reports earnings (and what they reported) is critical. Some of the biggest moves happen around earnings, and your sentiment model needs that context.
+Third, Reddit via PRAW. It's a different type of signal than news — retail sentiment can diverge from institutional sentiment, and that divergence itself can be predictive. It's also data your current sources don't overlap with at all.

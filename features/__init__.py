@@ -2,7 +2,11 @@
 Feature builders: calendar alignment, sentiment aggregation, joins to bars.
 """
 
-from .daily_sentiment_bars import build_daily_bars_sentiment_frame
+from .daily_sentiment_bars import (
+    build_daily_bars_sentiment_frame,
+    build_sentiment_features_for_target_sessions,
+)
+from .inference import inference_feature_matrix, latest_bar_inference_frame
 from .nyse_session import (
     nyse_sentiment_window_bounds_for_target_session,
     nyse_session_label_for_instant,
@@ -18,7 +22,10 @@ from .training_labels import add_open_to_close_return
 __all__ = [
     "add_open_to_close_return",
     "build_daily_bars_sentiment_frame",
+    "build_sentiment_features_for_target_sessions",
     "build_daily_training_frame",
+    "inference_feature_matrix",
+    "latest_bar_inference_frame",
     "default_training_feature_columns",
     "nyse_sentiment_window_bounds_for_target_session",
     "nyse_session_label_for_instant",

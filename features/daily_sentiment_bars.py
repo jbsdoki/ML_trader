@@ -100,6 +100,46 @@ def _bars_with_nyse_session(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def build_sentiment_features_for_target_sessions(
+    conn: sqlite3.Connection,
+    *,
+    model_id: str,
+    symbols: list[str],
+    nyse_session: object,
+    published_start: str | None = None,
+    published_end: str | None = None,
+    sentiment_mode: Literal["open_cutoff", "article_session"] = "open_cutoff",
+) -> pd.DataFrame:
+    """
+    Sentiment aggregates for ``(symbol, nyse_session)`` **without** requiring a bar row.
+
+    Use before the session's daily bar exists (e.g. at open) while matching training's
+    ``open_cutoff`` / ``article_session`` logic.
+    """
+    sym_clean = [x.strip().upper() for x in symbols if x and str(x).strip()]
+    if not sym_clean:
+        return pd.DataFrame(columns=["symbol", "nyse_session", "sentiment_mean", "sentiment_n", "sentiment_std"])
+
+    t_norm = _normalize_nyse_session_cell(nyse_session)
+    keys = pd.DataFrame(
+        {
+            "symbol": sym_clean,
+            "nyse_session": [t_norm] * len(sym_clean),
+        }
+    )
+    scored = fetch_article_sentiment_frame(
+        conn,
+        model_id=model_id,
+        symbols=sym_clean,
+        start=published_start,
+        end=published_end,
+    )
+    if sentiment_mode == "open_cutoff":
+        return _aggregate_sentiment_open_cutoff(scored, keys)
+    agg_full = _aggregate_sentiment_by_nyse_session(scored)
+    return keys.merge(agg_full, on=["symbol", "nyse_session"], how="left")
+
+
 def build_daily_bars_sentiment_frame(
     conn: sqlite3.Connection,
     *,

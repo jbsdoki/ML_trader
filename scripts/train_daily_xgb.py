@@ -2,13 +2,13 @@
 """
 Train an XGBoost regressor on daily sentiment + open-to-close return (v1).
 
-Default: single symbol AAPL, yfinance bars, FinBERT sentiment columns, time-ordered
-train/test split. Sentiment NaNs are passed through (missing days with no news).
+Default: single symbol AAPL, Alpaca bars (``bars.source_api``), FinBERT sentiment columns,
+time-ordered train/test split. Sentiment NaNs are passed through (missing days with no news).
 
 Example::
 
     python scripts/train_daily_xgb.py --symbols AAPL --model-id finbert \\
-        --bar-source yfinance --train-frac 0.8 --save-model data_store/xgb_daily.json
+        --bar-source alpaca --train-frac 0.8 --save-model data_store/xgb_daily.json
 """
 
 from __future__ import annotations
@@ -48,8 +48,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--bar-source",
         type=str,
-        default="yfinance",
-        help="bars.source_api filter (default: yfinance)",
+        default="alpaca",
+        help="bars.source_api filter (default: alpaca)",
     )
     parser.add_argument("--published-start", type=str, default=None)
     parser.add_argument("--published-end", type=str, default=None)

@@ -1,0 +1,18 @@
+# Conda environment: Python + SQLite CLI + pip packages from requirements.txt
+#
+# Create (from repo root):
+#   conda env create -f environment.yml
+# Update after editing requirements.txt:
+#   conda env update -f environment.yml --prune
+#
+# Then: conda activate ml_trader
+
+name: ml_trader
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - sqlite
+  - pip
+  - pip:
+      - -r requirements.txt

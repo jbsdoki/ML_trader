@@ -1,6 +1,6 @@
 # ML_Trader
 
-Experimentation and automation for stock research: ingest prices and news, score sentiment, build features, train models (e.g. XGBoost), backtest, and (optionally) run scheduled inference / paper trading.
+Experimentation and automation for stock research: ingest prices and news, score sentiment, build features, train models (e.g. XGBoost), run daily predictions, and (optionally) schedule inference. A broader backtest harness and Alpaca execution are listed under **Next steps**.
 
 ---
 
@@ -13,6 +13,12 @@ pip install -r requirements.txt
 ```
 
 Copy `.env.example` to `.env` and add keys for the APIs you use. Never commit `.env`.
+
+Alternatively create the conda env (Python + SQLite CLI + pip deps) with `conda env create -f environment.yml`.
+
+**Operational run order** (ingest through prediction): see **`runbook.md`** in the repo root. SQLite layout and ad hoc queries: **`data_store/readme.md`**.
+
+**One-shot full pipeline (bash):** from the repo root, `bash scripts/run_pipeline.sh` (Git Bash / WSL / Linux). Uses `config.yaml` for ingest when that file exists; otherwise set `SYMBOLS`, `START`, and `END`. Override paths and steps via env vars documented in the script header.
 
 ---
 
@@ -29,7 +35,7 @@ Each file talks to **one provider** and returns **pandas-friendly** tables (or a
 
 **Research (notebooks / one-off scripts):** import `fetch_ohlcv`, `fetch_company_news`, etc., explore DataFrames, then save Parquet/SQLite or push to cloud storage.
 
-**Production (VPS / cron):** run **`scripts/run_ingest.py`** (see below) on a schedule: pull bars + news → SQLite upserts (deduped). Later: sentiment → features → model → (optional) Alpaca orders. **`get_market_clock()`** can gate trading steps during market hours.
+**Production (VPS / cron):** run **`scripts/run_ingest.py`** (see below) on a schedule: pull bars + news → SQLite upserts (deduped). Then **`scripts/run_sentiment.py`**, optional **`scripts/build_daily_features.py`**, **`scripts/train_daily_xgb.py`** / **`scripts/predict_daily.py`** — see **`runbook.md`** for the full order and flags. **`get_market_clock()`** can gate trading steps during market hours.
 
 ### Ingest CLI (`scripts/run_ingest.py`)
 
@@ -57,7 +63,7 @@ Core logic lives in **`pipelines/ingest_pipeline.py`** (`IngestConfig`, `run_ing
 
 ## Pipeline overview (`_|` outline)
 
-Planned flow: ingestion modules stay **separate**; later stages **combine** their outputs. Boxes are conceptual—some scripts don’t exist yet.
+Ingestion modules stay **separate**; orchestration is **per-stage scripts** or **`scripts/run_pipeline.sh`** (details and CLI flags: **`runbook.md`**).
 
 ```
                               _|_
@@ -66,8 +72,8 @@ Planned flow: ingestion modules stay **separate**; later stages **combine** thei
                                |
                                v
 +----------------------------------------------------------+
-|                     pipeline.py (future)                  |
-|  optional: get_market_clock() -> skip if market closed   |
+|  scripts/run_ingest.py  ->  pipelines/ingest_pipeline    |
+|  optional: get_market_clock() before live trading steps   |
 +----------------------------------------------------------+
                                |
        ________________________|__________________________
@@ -75,9 +81,8 @@ Planned flow: ingestion modules stay **separate**; later stages **combine** thei
        v                        v                          v
   prices OHLCV              news articles            session / clock
        |                        |                          |
-       |                        |                          |
   yfinance_ingest.py      finnhub_ingest.py          alpaca_ingest.py
-  fetch_ohlcv(...)      fetch_company_news(...)     get_market_clock()
+  fetch_ohlcv(...)        fetch_company_news(...)    get_market_clock()
        |                  newsapi_ingest.py                |
        |                  fetch_everything(...)             |
        |                  fetch_for_symbol(...)            |
@@ -85,33 +90,33 @@ Planned flow: ingestion modules stay **separate**; later stages **combine** thei
        +------------+-----------+                          |
                     |                                      |
                     v                                      |
-            raw store / dedupe (SQLite, Parquet, GCS)       |
+            SQLite: bars, articles (storage/)               |
                     |                                      |
                     v                                      |
-            sentiment (FinBERT / model)                     |
+            scripts/run_sentiment.py (FinBERT)              |
                     |                                      |
                     v                                      |
-            feature engineering (TA + sentiment)            |
+     optional: scripts/build_daily_features.py              |
                     |                                      |
          +----------+----------+                           |
          |                     |                           |
          v                     v                           |
-   train (offline)       predict (live)                    |
-   models/ + joblib      same feature builder              |
+ scripts/train_daily_xgb.py  scripts/predict_daily.py       |
+ (joblib/json model)         bar-source + model-id match   |
          |                     |                           |
          |                     v                           |
-         |              Alpaca trading (paper first) <------+
+         |              Alpaca paper / live (future) <-----+
          |                     |
          v                     v
-      backtest            logs / alerts
+   evaluation / CSV         logs / alerts
 ```
 
 **Legend**
 
 - **Vertical `|`** — control or data flows downward.
-- **`_|_`** — top: something external (scheduler) kicks the pipeline.
-- **Branches** — multiple ingestion sources feed the same downstream stages.
-- **Dashed connection** — clock informs whether trading steps run.
+- **`_|_`** — something external (scheduler) kicks the pipeline.
+- **Branches** — multiple ingestion sources feed the same SQLite store.
+- **Training vs predict** — use the same **`--bar-source`** and **`--model-id`** as in the runbook so features line up.
 
 ---
 
@@ -120,18 +125,21 @@ Planned flow: ingestion modules stay **separate**; later stages **combine** thei
 | Path | Role |
 |------|------|
 | `data/` | Ingestion only (per-API fetchers). |
-| `pipelines/` | Orchestration (`ingest_pipeline`); more pipelines later. |
-| `scripts/` | CLI entrypoints (`run_ingest.py`). |
-| `storage/` | SQLite path, schema, `upsert_articles` / `upsert_bars`. |
+| `pipelines/` | `ingest_pipeline` (`IngestConfig`, `run_ingest_pipeline`). |
+| `scripts/` | `run_ingest.py`, `run_sentiment.py`, `build_daily_features.py`, `train_daily_xgb.py`, `predict_daily.py`, `run_pipeline.sh` (full pipeline). |
+| `features/` | Daily features, NYSE session windows, inference helpers. |
+| `storage/` | SQLite path, schema, upserts, sentiment reads. |
+| `data_store/` | Default DB directory; see `data_store/readme.md`. |
 | `models/` | Model wrappers and factory (e.g. XGBoost). |
-| `main.py` | Scratch / experiments (replace with real entrypoints over time). |
+| `testing/` | `pytest` suite (`requirements-dev.txt`). |
 | `requirements.txt` | Pip dependencies. |
+| `environment.yml` | Conda env (Python + SQLite CLI + pip deps). |
 | `.env.example` | Environment variable template. |
+| `runbook.md` | End-to-end command order (ingest through predict). |
 
 ---
 
 ## Next steps (not implemented here)
 
-- Sentiment scoring + aggregation (read from `articles` table).
-- Single feature-builder module that joins OHLCV + sentiment.
-- `inference_pipeline` + Alpaca paper execution + cron on VPS.
+- Backtest / walk-forward evaluation harness beyond train/validate split.
+- Alpaca paper or live execution wired to `predict_daily` outputs.

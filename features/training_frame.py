@@ -24,7 +24,7 @@ def build_daily_training_frame(
     model_id: str,
     symbols: list[str],
     bar_interval: str = "1d",
-    bar_source_api: str | None = "yfinance",
+    bar_source_api: str | None = "alpaca",
     published_start: str | None = None,
     published_end: str | None = None,
     bar_ts_start: str | None = None,
