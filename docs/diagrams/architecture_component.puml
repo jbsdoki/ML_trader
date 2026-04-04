@@ -1,0 +1,83 @@
+' ML_Trader — main packages and data store (component view).
+'
+' Render: PlantUML extension, plantuml.jar, or plantuml.com
+
+@startuml ML_Trader_architecture
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontName Verdana
+
+title ML_Trader — components and persistence
+
+package "Entry" {
+  [run_pipeline.sh] as orch
+  [run_ingest.py] as s_ingest
+  [run_sentiment.py] as s_sent
+  [build_daily_features.py] as s_feat
+  [train_daily_xgb.py] as s_train
+  [predict_daily.py] as s_pred
+}
+
+package "Orchestration" {
+  [ingest_pipeline.py] as pipe
+}
+
+package "Data Retrieval" {
+  [APIs] as apis
+}
+
+package "storage" {
+  [schema + repos] as stor
+}
+
+database "SQL Storage\nml_trader.db" as db
+
+package "features" {
+  [daily_sentiment_bars] as dsb
+  [training_frame +\ntraining_labels] as tf
+  [inference] as inf
+}
+
+package "sentiment" {
+  [finbert_scorer] as fb
+}
+
+package "models" {
+  [XGBoostRegressorModel] as xgb
+}
+
+folder "data_store (artifacts)" as ds {
+  file "daily_features.csv" as csv
+  file "xgb_daily.json" as model
+}
+
+orch -down-> s_ingest
+orch -down-> s_sent
+orch -down-> s_feat
+orch -down-> s_train
+orch -down-> s_pred
+
+s_ingest -down-> pipe
+pipe -down-> apis
+apis -down-> stor
+
+stor -right-> db
+
+s_sent -down-> fb
+fb -down-> stor
+
+s_feat -down-> dsb
+dsb -down-> stor
+dsb -right-> csv
+
+s_train -down-> tf
+tf -down-> stor
+s_train -down-> xgb
+xgb -right-> model
+
+s_pred -down-> inf
+inf -down-> stor
+s_pred -down-> xgb
+xgb ..> model : load
+
+@enduml

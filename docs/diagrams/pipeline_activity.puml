@@ -1,0 +1,57 @@
+' ML_Trader — high-level pipeline (activity). No script paths; matches runbook order.
+'
+' Render: PlantUML extension, plantuml.jar, or plantuml.com
+
+@startuml ML_Trader_pipeline_activity
+skinparam shadowing false
+skinparam defaultFontName Verdana
+skinparam activity {
+  BackgroundColor #E8F4FC
+  BorderColor #2E6DA4
+  DiamondBackgroundColor #FFF8E1
+  DiamondBorderColor #F9A825
+}
+
+title ML_Trader — pipeline flow (activity)
+
+start
+
+:Start run\n(scheduler, shell, or manual);
+
+partition "**1. Ingest**" #LightBlue {
+  :Pull prices and news\nfrom external APIs;
+  :Write new **bars** and **articles**\nto **SQL Storage** (ml_trader.db);
+}
+
+partition "**2. Sentiment**" #E8F5E9 {
+  :Score article text\nwith a language model;
+  :Store per-article scores\nin **SQL Storage** (ml_trader.db);
+}
+
+partition "**3. Optional export**" #FFF3E0 {
+  :Align bars with session sentiment;
+  :Optionally write a\nfeature table to disk;
+}
+
+partition "**4. Train**" #F3E5F5 {
+  :Build labeled examples\n(open-to-close return target);
+  :Fit model and save\nweights to disk;
+}
+
+partition "**5. Predict**" #ECEFF1 {
+  :Load saved model;
+  :Build features for latest\nor chosen session;
+  :Emit predicted returns;
+}
+
+note right
+  Training and prediction should use the same
+  bar source, sentiment model id, and feature rules.
+  Skip training when reusing an existing model.
+end note
+
+:**Later:** broker execution\n(paper or live);
+
+stop
+
+@enduml
