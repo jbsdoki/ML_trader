@@ -6,8 +6,8 @@ symbols:
   - AAPL
   - MSFT
 
-start: "2025-01-01"
-end: "2025-03-18"
+start: "2026-03-02"
+end: "2026-04-02"
 
 # Bar size for yfinance and Alpaca (Alpaca supports a subset; see pipelines/ingest_pipeline.py)
 bar_interval: "1d"

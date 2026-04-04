@@ -131,7 +131,7 @@ Ingestion modules stay **separate**; orchestration is **per-stage scripts** or *
 | `storage/` | SQLite path, schema, upserts, sentiment reads. |
 | `data_store/` | Default DB directory; see `data_store/readme.md`. |
 | `models/` | Model wrappers and factory (e.g. XGBoost). |
-| `testing/` | `pytest` suite (`requirements-dev.txt`). |
+| `testing/` | `pytest` suite (`requirements-dev.txt`); subdirs `data_retrieval/`, `features/`, `pipelines/`, `storage/`. |
 | `requirements.txt` | Pip dependencies. |
 | `environment.yml` | Conda env (Python + SQLite CLI + pip deps). |
 | `.env.example` | Environment variable template. |

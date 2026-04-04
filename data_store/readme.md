@@ -1,6 +1,8 @@
-# Data store (SQLite)
+# Data store (SQLite + artifacts)
 
 The primary database file is **`ml_trader.db`** in this directory when `ML_TRADER_DATA_DIR` is unset (default: `./data_store` under the process working directory). Override with env var **`ML_TRADER_DATA_DIR`** for cron or other machines.
+
+**Trained XGBoost model:** **`xgb_daily.json`** also lives in this folder by default (written by `scripts/train_daily_xgb.py --save-model data_store/xgb_daily.json`, consumed by `scripts/predict_daily.py --model ...`). It is **not** inside SQLite; it is XGBoost’s native JSON dump of the fitted regressor. You can change the path with `--save-model` / `--model` or `MODEL_OUT` in `scripts/run_pipeline.sh`.
 
 **End-to-end commands** (ingest through predict) are documented in the repo root **`runbook.md`**.
 
@@ -85,5 +87,5 @@ Same columns as defined in `storage/schema.py`: `dedupe_key` (PK), `source_api`,
 
 ## Other artifacts
 
-- **`daily_features.csv`** (or `.parquet`) — optional export from `scripts/build_daily_features.py`
-- **`xgb_daily.json`** — optional saved model from `scripts/train_daily_xgb.py --save-model`
+- **`daily_features.csv`** (or `.parquet`) — optional export from `scripts/build_daily_features.py` (`--out` defaults to `data_store/daily_features.csv` in the runbook / `run_pipeline.sh`).
+- **`xgb_daily.json`** — saved **here** after training (`--save-model data_store/xgb_daily.json`); keep this file for prediction without retraining. Add to `.gitignore` if you do not want the model in version control (the repo already ignores `data_store/**` except this `readme.md`).
