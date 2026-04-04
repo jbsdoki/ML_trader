@@ -5,3 +5,6 @@ __pycache__/
 # Local SQLite + runtime data (set ML_TRADER_DATA_DIR on VPS to another path if you prefer)
 data_store/**
 !data_store/readme.md
+
+tools/
+*.jar
