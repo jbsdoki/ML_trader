@@ -6,8 +6,8 @@ symbols:
   - AAPL
   - MSFT
 
-start: "2026-03-02"
-end: "2026-04-02"
+start: "2026-03-08"
+end: "2026-04-07"
 
 # Bar size for yfinance and Alpaca (Alpaca supports a subset; see pipelines/ingest_pipeline.py)
 bar_interval: "1d"
@@ -27,4 +27,4 @@ sources:
 # newsapi_max_pages: 1
 
 # Optional Alpaca market data feed (depends on your subscription)
-# alpaca_feed: "iex"
+alpaca_feed: "iex"

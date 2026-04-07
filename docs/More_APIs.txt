@@ -1,11 +1,22 @@
 SEC filings (earnings reports, 10-K, 10-Q, 8-K)
-Your current sources give you news articles and price data, but not the actual company filings that often drive the biggest moves.
-SEC EDGAR API — Completely free, no API key needed, run by the government. It provides submissions history by filer and XBRL data from financial statements including 10-Q, 10-K, 8-K, 20-F and their variants, updated throughout the day in real time as submissions are disseminated SEC. This is where earnings reports actually live. You can pull the raw text of any filing and run it through your sentiment model. The Python library edgartools or sec-edgar-downloader makes this easy.
+Your current sources give you news articles and price data, but not the actual company filings 
+that often drive the biggest moves.
+SEC EDGAR API — Completely free, no API key needed, run by the government. 
+It provides submissions history by filer and XBRL data from financial statements 
+including 10-Q, 10-K, 8-K, 20-F and their variants, updated throughout the day 
+in real time as submissions are disseminated SEC. 
+This is where earnings reports actually live. 
+You can pull the raw text of any filing and run it through your sentiment model. 
+The Python library edgartools or sec-edgar-downloader makes this easy.
 
 API docs: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
 Python library: pip install edgartools or pip install sec-edgar-downloader
 
-Financial Modeling Prep (FMP) — Excels at fundamental data, provides SEC EDGAR data with historical data going back 30+ years for major stocks, including calculated financial ratios. The free tier gives 250 requests per day Kyle Redelinghuys. This is more convenient than raw EDGAR because they've already parsed the filings into structured JSON with revenue, earnings, margins, etc.
+Financial Modeling Prep (FMP) — Excels at fundamental data, provides SEC EDGAR data with 
+historical data going back 30+ years for major stocks, including calculated financial ratios. 
+The free tier gives 250 requests per day Kyle Redelinghuys. 
+This is more convenient than raw EDGAR because they've already parsed the filings 
+into structured JSON with revenue, earnings, margins, etc.
 
 https://financialmodelingprep.com/
 

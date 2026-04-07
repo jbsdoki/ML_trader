@@ -1,10 +1,17 @@
+# Ignore environment variables
 .env
+
+# Ignore all Python cache files
 __pycache__/
 *.pyc
 
-# Local SQLite + runtime data (set ML_TRADER_DATA_DIR on VPS to another path if you prefer)
+# Local SQLite + runtime data 
 data_store/**
 !data_store/readme.md
 
+# Ignore any tools such as PlantUML or other files
 tools/
 *.jar
+
+# Ignore all log files
+logs/*

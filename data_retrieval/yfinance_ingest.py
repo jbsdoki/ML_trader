@@ -22,7 +22,10 @@ from typing import Iterable
 import pandas as pd
 import yfinance as yf
 
+from ._file_log import attach_module_file_logger
+
 logger = logging.getLogger(__name__)
+attach_module_file_logger(logger)
 
 
 def _normalize_ohlcv_df(df: pd.DataFrame) -> pd.DataFrame:
