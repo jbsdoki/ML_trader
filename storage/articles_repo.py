@@ -52,6 +52,21 @@ def _ingested_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _scalar_missing_or_blank(val: Any) -> bool:
+    """True if ``val`` is None, pandas NA/NaN, empty, or the literal string ``nan``."""
+    if val is None:
+        return True
+    try:
+        if pd.isna(val):
+            return True
+    except (TypeError, ValueError):
+        pass
+    s = str(val).strip()
+    if not s or s.lower() == "nan":
+        return True
+    return False
+
+
 def article_dedupe_key(source_api: str, row: pd.Series) -> str:
     """
     Build a stable primary-key string for one article row.
@@ -62,14 +77,17 @@ def article_dedupe_key(source_api: str, row: pd.Series) -> str:
     """
     src = source_api.strip().lower()
     aid = row.get("article_id")
-    if aid is not None and str(aid).strip() and str(aid).lower() != "nan":
+    if not _scalar_missing_or_blank(aid):
         return f"{src}:id:{str(aid).strip()}"
 
-    url = (row.get("url") or "").strip()
-    if url:
-        return f"{src}:url:{url}"
+    url_raw = row.get("url")
+    if not _scalar_missing_or_blank(url_raw):
+        u = str(url_raw).strip()
+        if u:
+            return f"{src}:url:{u}"
 
-    headline = (row.get("headline") or "").strip()
+    hl = row.get("headline")
+    headline = "" if _scalar_missing_or_blank(hl) else str(hl).strip()
     when = _utc_iso(row.get("datetime"))
     return f"{src}:fallback:{when}:{headline[:200]}"
 
