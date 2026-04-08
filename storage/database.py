@@ -15,10 +15,16 @@ Useful references
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 from pathlib import Path
 from typing import Any
+
+from ._file_log import attach_module_file_logger
+
+logger = logging.getLogger(__name__)
+attach_module_file_logger(logger)
 
 # Default relative path when ML_TRADER_DATA_DIR is unset (local dev).
 _DEFAULT_DATA_SUBDIR = "data_store"
@@ -85,8 +91,22 @@ def connect(*, create_parent: bool = True, **kwargs: Any) -> sqlite3.Connection:
     if create_parent:
         ensure_data_dir()
     path = get_db_path()
-    conn = sqlite3.connect(str(path), check_same_thread=False, **kwargs)
+    data_dir = get_data_dir()
+    try:
+        conn = sqlite3.connect(str(path), check_same_thread=False, **kwargs)
+    except (OSError, sqlite3.Error):
+        logger.exception(
+            "SQLite connection failed path=%s data_dir=%s",
+            path,
+            data_dir,
+        )
+        raise
     conn.row_factory = sqlite3.Row
     # Foreign keys are off by default in SQLite; enable if you add FK constraints later.
     conn.execute("PRAGMA foreign_keys = ON;")
+    logger.info(
+        "SQLite connection opened path=%s data_dir=%s",
+        path,
+        data_dir,
+    )
     return conn

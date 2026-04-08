@@ -23,7 +23,10 @@ from typing import Any
 
 import pandas as pd
 
+from ._file_log import attach_module_file_logger
+
 logger = logging.getLogger(__name__)
+attach_module_file_logger(logger)
 
 
 def _utc_bar_ts_iso(ts: Any) -> str:

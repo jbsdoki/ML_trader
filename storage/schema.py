@@ -16,7 +16,13 @@ Useful references
 
 from __future__ import annotations
 
+import logging
 import sqlite3
+
+from ._file_log import attach_module_file_logger
+
+logger = logging.getLogger(__name__)
+attach_module_file_logger(logger)
 
 # SQL executed in order when initializing a fresh database.
 _SCHEMA_STATEMENTS: tuple[str, ...] = (
@@ -102,9 +108,13 @@ def init_schema(conn: sqlite3.Connection) -> None:
     vendor, symbol, interval, and bar open time.
     """
     cur = conn.cursor()
-    for stmt in _SCHEMA_STATEMENTS:
-        cur.execute(stmt)
-    conn.commit()
+    try:
+        for stmt in _SCHEMA_STATEMENTS:
+            cur.execute(stmt)
+        conn.commit()
+    except sqlite3.Error:
+        logger.exception("init_schema failed while applying DDL")
+        raise
 
 
 def schema_version(conn: sqlite3.Connection) -> int:
