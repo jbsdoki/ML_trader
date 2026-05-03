@@ -63,7 +63,7 @@ def _seed_article_sentiment_bar(conn: sqlite3.Connection) -> None:
             "volume": [1e6],
         }
     )
-    upsert_bars(conn, bars, "yfinance", "1d")
+    upsert_bars(conn, bars, "alpaca", "1d")
 
 
 def test_build_sentiment_features_for_target_sessions_has_columns() -> None:
@@ -112,7 +112,7 @@ def test_latest_bar_inference_frame_roundtrip() -> None:
         conn,
         model_id="finbert",
         symbols=["AAPL"],
-        bar_source_api="yfinance",
+        bar_source_api="alpaca",
         sentiment_mode="article_session",
     )
     conn.close()

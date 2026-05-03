@@ -2,8 +2,8 @@
 Helpers so each ``data_retrieval`` ingest module can write its own log file.
 
 When a module imports, it calls :func:`attach_module_file_logger` once. That creates
-``logs/data_retrieval/<module>.log`` next to the project (repo root is one level above
-this package).
+``logs/data_retrieval/<module>.log`` under the repository root (two levels above this file:
+``src/data_retrieval/_file_log.py``).
 
 We attach the file handler to the **module** logger (e.g. ``data_retrieval.alpaca_ingest``),
 not the root logger, so ingest code does not take over logging for the whole program.
@@ -25,7 +25,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-_LOG_ROOT = Path(__file__).resolve().parent.parent / "logs" / "data_retrieval"
+# Repo root: .../src/data_retrieval/_file_log.py -> parents[2]
+_LOG_ROOT = Path(__file__).resolve().parents[2] / "logs" / "data_retrieval"
 _FORMAT = logging.Formatter(
     "%(asctime)s %(levelname)s %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",

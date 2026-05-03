@@ -5,18 +5,19 @@
 symbols:
   - AAPL
   - MSFT
+  - GOOG
+  - AMZN
 
-start: "2026-03-08"
-end: "2026-04-07"
+start: "2026-03-27"
+end: "2026-04-26"
 
-# Bar size for yfinance and Alpaca (Alpaca supports a subset; see pipelines/ingest_pipeline.py)
+# Bar size for Alpaca (Alpaca supports a subset; see src/pipelines/ingest_pipeline.py)
 bar_interval: "1d"
 
-# Omit ``sources`` to enable all four; or restrict e.g. [finnhub, yfinance]
+# Omit ``sources`` to enable finnhub, newsapi, and alpaca; or list only the ones you need
 sources:
   - finnhub
   - newsapi
-  - yfinance
   - alpaca
 
 # Optional: helps NewsAPI recall beyond the raw ticker (per-symbol query still uses ticker)

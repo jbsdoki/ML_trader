@@ -22,18 +22,17 @@ Alternatively create the conda env (Python + SQLite CLI + pip deps) with `conda 
 
 ---
 
-## How the `data/` ingestion files are used
+## How the `src/data_retrieval/` ingestion modules are used
 
 Each file talks to **one provider** and returns **pandas-friendly** tables (or a small dict for Alpaca clock). You import them when you need that source—there is no single mega “fetch everything” function on purpose.
 
 | Module | Typical use |
 |--------|----------------|
-| **`data/yfinance_ingest.py`** | Free OHLCV history for backtests and features. Good default when you don’t need a broker-aligned feed. |
-| **`data/alpaca_ingest.py`** | OHLCV from Alpaca’s market data API (same account as trading). Use when you want bars consistent with what you’ll trade on, or when yfinance is flaky. **`get_market_clock()`** answers “is the market open?” before your scheduled job places orders. |
-| **`data/finnhub_ingest.py`** | Company-scoped news by ticker and date range. Strong fit for “all headlines for `AAPL` this week.” |
-| **`data/newsapi_ingest.py`** | Keyword / search-driven news (`everything`) or broad **top headlines**. Use to complement Finnhub or for macro / multi-company queries. |
+| **`src/data_retrieval/alpaca_ingest.py`** | OHLCV from Alpaca’s market data API (same account as trading). Ingest writes **`bars`** with `source_api = alpaca`. **`get_market_clock()`** answers “is the market open?” before your scheduled job places orders. |
+| **`src/data_retrieval/finnhub_ingest.py`** | Company-scoped news by ticker and date range. Strong fit for “all headlines for `AAPL` this week.” |
+| **`src/data_retrieval/newsapi_ingest.py`** | Keyword / search-driven news (`everything`) or broad **top headlines**. Use to complement Finnhub or for macro / multi-company queries. |
 
-**Research (notebooks / one-off scripts):** import `fetch_ohlcv`, `fetch_company_news`, etc., explore DataFrames, then save Parquet/SQLite or push to cloud storage.
+**Research (notebooks / one-off scripts):** import `fetch_stock_bars`, `fetch_company_news`, etc., explore DataFrames, then save Parquet/SQLite or push to cloud storage.
 
 **Production (VPS / cron):** run **`scripts/run_ingest.py`** (see below) on a schedule: pull bars + news → SQLite upserts (deduped). Then **`scripts/run_sentiment.py`**, optional **`scripts/build_daily_features.py`**, **`scripts/train_daily_xgb.py`** / **`scripts/predict_daily.py`** — see **`runbook.md`** for the full order and flags. **`get_market_clock()`** can gate trading steps during market hours.
 
@@ -51,13 +50,13 @@ YAML config (`config.yaml` example in repo):
 python scripts/run_ingest.py --config config.yaml
 ```
 
-- **`--sources`** — comma list: `finnhub`, `newsapi`, `yfinance`, `alpaca` (omit individual APIs you do not use).
-- **Dates** — `start` / `end` are **inclusive** calendar days for news; yfinance’s exclusive `end` is adjusted inside `pipelines/ingest_pipeline.py`.
+- **`--sources`** — comma list: `finnhub`, `newsapi`, `alpaca` (omit individual APIs you do not use). Bars are fetched only from **Alpaca** when `alpaca` is enabled.
+- **Dates** — `start` / `end` are **inclusive** calendar days for news and the bar window.
 - Exit code **2** if any symbol/source logged an error (partial success still possible); **0** if clean.
 
-Core logic lives in **`pipelines/ingest_pipeline.py`** (`IngestConfig`, `run_ingest_pipeline`, `IngestSummary`).
+Core logic lives in **`src/pipelines/ingest_pipeline.py`** (`IngestConfig`, `run_ingest_pipeline`, `IngestSummary`).
 
-**`data/__init__.py`** re-exports the main symbols so you can write `from data import fetch_ohlcv, fetch_company_news` from the repo root (with the project directory on `PYTHONPATH` or run from repo root).
+**`src/data_retrieval/__init__.py`** re-exports the main symbols so you can write `from data_retrieval import fetch_stock_bars, fetch_company_news` after putting **`src/`** on ``PYTHONPATH`` (``export PYTHONPATH=src``) or by using the repo ``scripts/`` entrypoints, which add ``src`` automatically.
 
 ---
 
@@ -72,7 +71,7 @@ Ingestion modules stay **separate**; orchestration is **per-stage scripts** or *
                                |
                                v
 +----------------------------------------------------------+
-|  scripts/run_ingest.py  ->  pipelines/ingest_pipeline    |
+|  scripts/run_ingest.py  ->  src/pipelines/ingest_pipeline    |
 |  optional: get_market_clock() before live trading steps   |
 +----------------------------------------------------------+
                                |
@@ -81,8 +80,8 @@ Ingestion modules stay **separate**; orchestration is **per-stage scripts** or *
        v                        v                          v
   prices OHLCV              news articles            session / clock
        |                        |                          |
-  yfinance_ingest.py      finnhub_ingest.py          alpaca_ingest.py
-  fetch_ohlcv(...)        fetch_company_news(...)    get_market_clock()
+  alpaca_ingest.py        finnhub_ingest.py          alpaca_ingest.py
+  fetch_stock_bars(...)   fetch_company_news(...)    get_market_clock()
        |                  newsapi_ingest.py                |
        |                  fetch_everything(...)             |
        |                  fetch_for_symbol(...)            |
@@ -90,7 +89,7 @@ Ingestion modules stay **separate**; orchestration is **per-stage scripts** or *
        +------------+-----------+                          |
                     |                                      |
                     v                                      |
-            SQLite: bars, articles (storage/)               |
+            SQLite: bars, articles (src/storage/)            |
                     |                                      |
                     v                                      |
             scripts/run_sentiment.py (FinBERT)              |
@@ -124,13 +123,14 @@ Ingestion modules stay **separate**; orchestration is **per-stage scripts** or *
 
 | Path | Role |
 |------|------|
-| `data/` | Ingestion only (per-API fetchers). |
-| `pipelines/` | `ingest_pipeline` (`IngestConfig`, `run_ingest_pipeline`). |
+| `src/` | Library code: `storage`, `data_retrieval`, `pipelines`, `features`, `models`, `sentiment`. |
+| `src/data_retrieval/` | Ingestion only (per-API fetchers). |
+| `src/pipelines/` | `ingest_pipeline` (`IngestConfig`, `run_ingest_pipeline`). |
 | `scripts/` | `run_ingest.py`, `run_sentiment.py`, `build_daily_features.py`, `train_daily_xgb.py`, `predict_daily.py`, `run_pipeline.sh` (full pipeline). |
-| `features/` | Daily features, NYSE session windows, inference helpers. |
-| `storage/` | SQLite path, schema, upserts, sentiment reads. |
+| `src/features/` | Daily features, NYSE session windows, inference helpers. |
+| `src/storage/` | SQLite path, schema, upserts, sentiment reads. |
 | `data_store/` | Default DB directory; see `data_store/readme.md`. |
-| `models/` | Model wrappers and factory (e.g. XGBoost). |
+| `src/models/` | Model wrappers and factory (e.g. XGBoost). |
 | `testing/` | `pytest` suite (`requirements-dev.txt`); subdirs `data_retrieval/`, `features/`, `pipelines/`, `storage/`. |
 | `requirements.txt` | Pip dependencies. |
 | `environment.yml` | Conda env (Python + SQLite CLI + pip deps). |

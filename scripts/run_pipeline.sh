@@ -55,7 +55,8 @@ run_ingest() {
     "$PYTHON" scripts/run_ingest.py --config "$INGEST_CONFIG" "${VERBOSE_FLAG[@]}"
   else
     "$PYTHON" scripts/run_ingest.py \
-      --symbols "$SYMBOLS" --start "$START" --end "$END" --interval "$INTERVAL" "${VERBOSE_FLAG[@]}"
+      --symbols "$SYMBOLS" --start "$START" --end "$END" --interval "$INTERVAL" \
+      --sources finnhub,newsapi,alpaca "${VERBOSE_FLAG[@]}"
   fi
 }
 

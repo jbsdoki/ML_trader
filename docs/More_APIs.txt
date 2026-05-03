@@ -73,6 +73,6 @@ pip install pytrends
 
 What I'd actually add to your pipeline first:
 If I had to pick three from this list to add next, in order of likely value:
-First, FRED. Macro data is easy to integrate (just a few time series to pull), rarely noisy, and gives your model important context that pure stock-level sentiment misses. A few key series — Fed funds rate, VIX (which you can also get from yfinance), 10-year treasury yield, CPI — can meaningfully improve predictions.
+First, FRED. Macro data is easy to integrate (just a few time series to pull), rarely noisy, and gives your model important context that pure stock-level sentiment misses. A few key series — Fed funds rate, VIX, 10-year treasury yield, CPI — can meaningfully improve predictions.
 Second, SEC EDGAR or FMP for earnings data. Knowing when a company reports earnings (and what they reported) is critical. Some of the biggest moves happen around earnings, and your sentiment model needs that context.
 Third, Reddit via PRAW. It's a different type of signal than news — retail sentiment can diverge from institutional sentiment, and that divergence itself can be predictive. It's also data your current sources don't overlap with at all.

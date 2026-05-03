@@ -11,7 +11,7 @@ Optional date bounds (same ISO handling as ``storage.sentiment_repo``)::
     python scripts/run_sentiment.py --start 2025-01-01 --end 2025-03-01
 
 **Cron / VPS:** use the venv interpreter, absolute path, and set ``ML_TRADER_DATA_DIR``
-so the DB path is stable (see ``storage/database.py``).
+so the DB path is stable (see ``src/storage/database.py``).
 """
 
 from __future__ import annotations
@@ -23,8 +23,9 @@ from pathlib import Path
 from typing import Any
 
 _ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+_SRC = _ROOT / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
 
 def _configure_logging(verbose: bool) -> None:

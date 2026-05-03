@@ -11,7 +11,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-_LOG_ROOT = Path(__file__).resolve().parent.parent / "logs" / "storage"
+# Repo root: .../src/storage/_file_log.py -> parents[2]
+_LOG_ROOT = Path(__file__).resolve().parents[2] / "logs" / "storage"
 _FORMAT = logging.Formatter(
     "%(asctime)s %(levelname)s %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",

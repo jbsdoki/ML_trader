@@ -11,7 +11,7 @@ def test_build_daily_bars_sentiment_frame_no_bars_returns_empty(sqlite_conn) -> 
         model_id="finbert",
         symbols=["AAPL"],
         bar_interval="1d",
-        bar_source_api="yfinance",
+        bar_source_api="alpaca",
     )
     assert out.empty
 

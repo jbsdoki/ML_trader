@@ -1,5 +1,5 @@
 """
-Persist OHLCV bar DataFrames (yfinance, Alpaca) with deduplication.
+Persist OHLCV bar DataFrames (e.g. Alpaca) with deduplication.
 
 Bars are keyed by ``(source_api, symbol, bar_interval, bar_ts)`` so re-fetching
 the same history does not duplicate rows. Uses ``INSERT OR IGNORE``.
@@ -10,8 +10,7 @@ Useful references
   https://www.sqlite.org/lang_createtable.html
 - Alpaca bar object (fields like vwap, trade_count):
   https://docs.alpaca.markets/reference/stockbars
-- yfinance ``history()`` output:
-  https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.history.html
+- Alpaca ``fetch_stock_bars`` output (see ``src/data_retrieval/alpaca_ingest``).
 """
 
 from __future__ import annotations
@@ -63,7 +62,7 @@ def _bars_df_to_records(
 
     Accepts either a ``timestamp`` column or a DatetimeIndex (resets index if needed).
     Required OHLCV columns: ``open``, ``high``, ``low``, ``close``, ``volume``
-    (after lowercasing — matches ``data.yfinance_ingest`` / ``data.alpaca_ingest``).
+    (after lowercasing — matches ``data_retrieval.alpaca_ingest`` column names).
     """
     if df is None or df.empty:
         return []
@@ -71,7 +70,7 @@ def _bars_df_to_records(
     work = df.copy()
     if isinstance(work.index, pd.DatetimeIndex):
         work = work.reset_index()
-        # yfinance sets index name to 'timestamp'; reset_index creates column
+        # Datetime index often becomes first column after reset_index; normalize to ``timestamp``
         ts_col = work.columns[0] if "timestamp" not in work.columns else "timestamp"
         if ts_col != "timestamp" and work.columns[0] != "timestamp":
             work = work.rename(columns={work.columns[0]: "timestamp"})
@@ -108,7 +107,7 @@ def _bars_df_to_records(
                 return None
             return int(v)
 
-        # yfinance lowercases split column to ``stock splits`` (with space); Alpaca may differ.
+        # Some vendors lowercase split column to ``stock splits`` (with space); Alpaca may differ.
         split_val = _f("stock splits")
         if split_val is None:
             split_val = _f("stock_splits")
@@ -148,9 +147,9 @@ def upsert_bars(
     conn
         SQLite connection with ``bars`` table initialized.
     df
-        Output of ``fetch_ohlcv`` / ``fetch_stock_bars`` (lowercase OHLCV columns).
+        Output of ``fetch_stock_bars`` (lowercase OHLCV columns).
     source_api
-        e.g. ``\"yfinance\"`` or ``\"alpaca\"``.
+        e.g. ``\"alpaca\"``.
     bar_interval
         Must match the request (e.g. ``\"1d\"``, ``\"1h\"``) — not always inferable from df.
 

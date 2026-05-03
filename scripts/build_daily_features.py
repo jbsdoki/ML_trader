@@ -24,8 +24,9 @@ import sys
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+_SRC = _ROOT / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
 
 def _configure_logging(verbose: bool) -> None:
@@ -52,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         "--bar-source",
         type=str,
         default=None,
-        help="Optional bars source_api (yfinance, alpaca, ...) to avoid duplicate vendors",
+        help="Optional bars source_api (e.g. alpaca) to avoid duplicate vendors",
     )
     parser.add_argument("--published-start", type=str, default=None, help="Lower bound articles.published_at")
     parser.add_argument("--published-end", type=str, default=None, help="Upper bound articles.published_at")

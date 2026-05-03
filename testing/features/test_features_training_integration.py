@@ -15,7 +15,7 @@ from storage.sentiment_repo import upsert_article_sentiment
 
 
 def _seed_minimal_aapl_session(sqlite_conn: sqlite3.Connection) -> None:
-    """One Finnhub article, one sentiment row, one yfinance daily bar (same calendar idea)."""
+    """One Finnhub article, one sentiment row, one Alpaca daily bar (same calendar idea)."""
     article = pd.DataFrame(
         [
             {
@@ -63,7 +63,7 @@ def _seed_minimal_aapl_session(sqlite_conn: sqlite3.Connection) -> None:
             "volume": [1e6],
         }
     )
-    upsert_bars(sqlite_conn, bars, "yfinance", "1d")
+    upsert_bars(sqlite_conn, bars, "alpaca", "1d")
 
 
 def test_build_daily_training_frame_article_session_non_empty() -> None:
@@ -76,7 +76,7 @@ def test_build_daily_training_frame_article_session_non_empty() -> None:
         model_id="finbert",
         symbols=["AAPL"],
         bar_interval="1d",
-        bar_source_api="yfinance",
+        bar_source_api="alpaca",
         sentiment_mode="article_session",
     )
     conn.close()

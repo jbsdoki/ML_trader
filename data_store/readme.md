@@ -11,10 +11,10 @@ The primary database file is **`ml_trader.db`** in this directory when `ML_TRADE
 | Table | Role |
 |-------|------|
 | **`articles`** | Ingested news: `dedupe_key`, `symbol`, `published_at`, headline, summary, URL, etc. |
-| **`bars`** | OHLCV: composite primary key on `source_api`, `symbol`, `bar_interval`, `bar_ts`. Vendor is stored in **`source_api`** (e.g. `alpaca`, `yfinance`). |
+| **`bars`** | OHLCV: composite primary key on `source_api`, `symbol`, `bar_interval`, `bar_ts`. Vendor is stored in **`source_api`** (ingest uses **`alpaca`** for market-data bars). |
 | **`article_sentiment`** | FinBERT (or other) scores per article and `model_id`; FK to `articles.dedupe_key`. |
 
-Training and prediction scripts filter bars with **`--bar-source`**; it must match the **`source_api`** values you actually ingested (many setups have **Alpaca** only if Yahoo was rate-limited).
+Training and prediction scripts filter bars with **`--bar-source`**; it must match the **`source_api`** values you ingested (typically **alpaca**).
 
 ## Optional: SQLite CLI
 
@@ -67,7 +67,7 @@ python -c "import sqlite3; c=sqlite3.connect('data_store/ml_trader.db'); print(c
 <details>
 <summary><code>PRAGMA table_info(articles)</code> (expand)</summary>
 
-Same columns as defined in `storage/schema.py`: `dedupe_key` (PK), `source_api`, `symbol`, `published_at`, `headline`, `summary`, `source_name`, `url`, `author`, `category`, `related`, `image_url`, `content_snippet`, `ingested_at`.
+Same columns as defined in `src/storage/schema.py`: `dedupe_key` (PK), `source_api`, `symbol`, `published_at`, `headline`, `summary`, `source_name`, `url`, `author`, `category`, `related`, `image_url`, `content_snippet`, `ingested_at`.
 
 </details>
 

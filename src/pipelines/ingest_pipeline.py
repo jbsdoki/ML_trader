@@ -3,7 +3,7 @@ Orchestrate **fetch → persist → dedupe** for news and OHLCV bars.
 
 This module ties together:
 
-- **Ingest** — :mod:`data` clients (Finnhub, NewsAPI, yfinance, Alpaca).
+- **Ingest** — :mod:`data_retrieval` clients (Finnhub, NewsAPI, Alpaca for OHLCV).
 - **Storage** — :mod:`storage` SQLite upserts (see ``INSERT OR IGNORE`` / primary keys).
 
 **Useful background**
@@ -16,8 +16,6 @@ This module ties together:
   https://finnhub.io/docs/api/company-news
 - NewsAPI everything / limits:
   https://newsapi.org/docs/endpoints/everything
-- yfinance ``history``:
-  https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.history.html
 - Alpaca stock bars:
   https://docs.alpaca.markets/reference/stockbars
 
@@ -25,7 +23,7 @@ This module ties together:
 
 - **Pipeline** — One coordinated run: open DB, optionally init schema, pull from APIs, upsert rows.
 - **Dedupe** — Handled inside :mod:`storage` repos; re-running the same window does not duplicate PKs.
-- **Bar interval** — Candle size (e.g. ``1d``, ``1h``). yfinance and Alpaca support overlapping but not identical sets; unsupported Alpaca intervals are skipped with a logged warning.
+- **Bar interval** — Candle size (e.g. ``1d``, ``1h``). Unsupported Alpaca intervals are skipped with a logged warning.
 """
 
 from __future__ import annotations
@@ -42,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Alpaca bar intervals accepted by data.alpaca_ingest.timeframe_from_string
-# (yfinance allows more, e.g. ``5d`` — Alpaca path is skipped for those unless mapped later).
+# Intervals not in this set are skipped for Alpaca ingest unless mapping is extended later.
 # ---------------------------------------------------------------------------
 _ALPACA_INTERVALS = frozenset(
     {"1m", "5m", "15m", "30m", "1h", "60m", "1d", "1w", "1wk", "1mo"}
@@ -61,8 +59,8 @@ class IngestConfig:
     start, end
         Calendar window ``YYYY-MM-DD`` for **news** (Finnhub/NewsAPI) and **bar** history.
     bar_interval
-        OHLCV bar size passed to yfinance/Alpaca (e.g. ``1d``, ``1h``).
-    finnhub, newsapi, yfinance, alpaca
+        OHLCV bar size passed to Alpaca (e.g. ``1d``, ``1h``).
+    finnhub, newsapi, alpaca
         Enable flags per data source (missing API keys → warning + skip for that source).
     alpaca_feed
         Optional Alpaca data feed (e.g. ``sip``, ``iex``); ``None`` uses Alpaca default.
@@ -80,7 +78,6 @@ class IngestConfig:
     bar_interval: str = "1d"
     finnhub: bool = True
     newsapi: bool = True
-    yfinance: bool = True
     alpaca: bool = True
     alpaca_feed: str | None = None
     newsapi_extra_query: str | None = None
@@ -99,7 +96,6 @@ class IngestSummary:
 
     articles_finnhub_inserted: int = 0
     articles_newsapi_inserted: int = 0
-    bars_yfinance_inserted: int = 0
     bars_alpaca_inserted: int = 0
     errors: list[str] = field(default_factory=list)
 
@@ -122,7 +118,7 @@ def parse_sources_csv(s: str) -> dict[str, bool]:
     """
     Parse a comma-separated source list into enable flags.
 
-    Recognized tokens (case-insensitive): ``finnhub``, ``newsapi``, ``yfinance``, ``alpaca``.
+    Recognized tokens (case-insensitive): ``finnhub``, ``newsapi``, ``alpaca``.
     Unknown tokens are ignored with a warning.
     """
     raw = {x.strip().lower() for x in s.split(",") if x.strip()}
@@ -130,10 +126,9 @@ def parse_sources_csv(s: str) -> dict[str, bool]:
         return {
             "finnhub": True,
             "newsapi": True,
-            "yfinance": True,
             "alpaca": True,
         }
-    known = ("finnhub", "newsapi", "yfinance", "alpaca")
+    known = ("finnhub", "newsapi", "alpaca")
     for token in raw:
         if token not in known:
             logger.warning("Unknown source in --sources: %r (ignored)", token)
@@ -152,7 +147,7 @@ def load_ingest_config_yaml(path: Path) -> IngestConfig:
         start: \"2025-01-01\"
         end: \"2025-03-18\"
         bar_interval: \"1d\"
-        sources: [finnhub, newsapi, yfinance, alpaca]   # optional; default all
+        sources: [finnhub, newsapi, alpaca]   # optional; default all three
         newsapi_extra_query: null
         alpaca_feed: null
         newsapi_page_size: 100
@@ -179,7 +174,7 @@ def load_ingest_config_yaml(path: Path) -> IngestConfig:
     bar_interval = str(data.get("bar_interval", "1d")).strip()
     sources = data.get("sources")
     if sources is None:
-        finnhub = newsapi = yfinance = alpaca = True
+        finnhub = newsapi = alpaca = True
     else:
         if isinstance(sources, str):
             src_set = {x.strip().lower() for x in sources.split(",") if x.strip()}
@@ -187,7 +182,6 @@ def load_ingest_config_yaml(path: Path) -> IngestConfig:
             src_set = {str(x).strip().lower() for x in sources}
         finnhub = "finnhub" in src_set
         newsapi = "newsapi" in src_set
-        yfinance = "yfinance" in src_set
         alpaca = "alpaca" in src_set
 
     extra = data.get("newsapi_extra_query")
@@ -202,7 +196,6 @@ def load_ingest_config_yaml(path: Path) -> IngestConfig:
         bar_interval=bar_interval,
         finnhub=finnhub,
         newsapi=newsapi,
-        yfinance=yfinance,
         alpaca=alpaca,
         alpaca_feed=None if feed in (None, "") else str(feed),
         newsapi_extra_query=None if extra in (None, "") else str(extra),
@@ -265,45 +258,6 @@ def _ingest_newsapi(
             summary.errors.append(msg)
 
 
-def _ingest_yfinance_bars(
-    conn: sqlite3.Connection,
-    symbols: list[str],
-    start: str,
-    end: str,
-    interval: str,
-    summary: IngestSummary,
-) -> None:
-    """
-    Download OHLCV via yfinance and upsert into ``bars``.
-
-    **Note:** yfinance ``end`` is **exclusive**. We pass ``end + 1 calendar day`` so the
-    CLI ``--end`` date behaves **inclusive**, matching Finnhub/NewsAPI date windows
-    """
-    from data_retrieval.yfinance_ingest import fetch_ohlcv
-    from storage.bars_repo import upsert_bars
-
-    end_exclusive = (pd.Timestamp(end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-
-    for sym in symbols:
-        try:
-            df = fetch_ohlcv(sym, start=start, end=end_exclusive, interval=interval)
-            if df.empty:
-                logger.warning("yfinance returned no bars for %s", sym)
-                continue
-            # fetch_ohlcv uses DatetimeIndex; bars_repo accepts index or column
-            work = df.reset_index()
-            if "timestamp" not in work.columns and work.columns.size > 0:
-                first = work.columns[0]
-                work = work.rename(columns={first: "timestamp"})
-            summary.bars_yfinance_inserted += upsert_bars(
-                conn, work, "yfinance", interval
-            )
-        except Exception as e:
-            msg = f"yfinance bars failed for {sym}: {e}"
-            logger.exception(msg)
-            summary.errors.append(msg)
-
-
 def _ingest_alpaca_bars(
     conn: sqlite3.Connection,
     symbols: list[str],
@@ -321,7 +275,7 @@ def _ingest_alpaca_bars(
     if iv not in _ALPACA_INTERVALS:
         msg = (
             f"Alpaca ingest skipped: interval {interval!r} not in supported set "
-            f"{sorted(_ALPACA_INTERVALS)}. Use yfinance for this interval or extend mapping."
+            f"{sorted(_ALPACA_INTERVALS)}. Extend timeframe mapping in alpaca_ingest or choose a supported interval."
         )
         logger.warning(msg)
         summary.errors.append(msg)
@@ -409,15 +363,6 @@ def run_ingest_pipeline(
                 config.newsapi_max_pages,
                 summary,
             )
-        if config.yfinance:
-            _ingest_yfinance_bars(
-                conn,
-                symbols,
-                config.start,
-                config.end,
-                config.bar_interval,
-                summary,
-            )
         if config.alpaca:
             _ingest_alpaca_bars(
                 conn,
@@ -433,10 +378,9 @@ def run_ingest_pipeline(
             conn.close()
 
     logger.info(
-        "Ingest complete: finnhub_articles=%s newsapi_articles=%s yf_bars=%s alpaca_bars=%s errors=%s",
+        "Ingest complete: finnhub_articles=%s newsapi_articles=%s alpaca_bars=%s errors=%s",
         summary.articles_finnhub_inserted,
         summary.articles_newsapi_inserted,
-        summary.bars_yfinance_inserted,
         summary.bars_alpaca_inserted,
         len(summary.errors),
     )

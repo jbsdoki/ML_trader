@@ -11,7 +11,7 @@ And hardcoded in .env to use only paper trading
 
 **Why this file is Alpaca-specific:** The SDK returns ``BarSet`` objects (often exposed as a
 pandas DataFrame with Alpaca's column names and a multi-index). We map that into lowercase
-OHLCV-style columns plus ``timestamp`` / ``symbol`` so it lines up with ``yfinance_ingest``.
+OHLCV-style columns plus ``timestamp`` / ``symbol`` for ``storage.bars_repo``.
 
 **Official format / API references**
 
@@ -84,7 +84,7 @@ def timeframe_from_string(
     interval: Literal["1m", "5m", "15m", "30m", "1h", "1d", "1w", "1mo"] | str,
 ) -> TimeFrame:
     """
-    Map our string intervals (similar to yfinance) to Alpaca's ``TimeFrame`` objects.
+    Map our string intervals to Alpaca's ``TimeFrame`` objects.
 
     Alpaca defines bar length via ``TimeFrame(amount, unit)`` — see their timeframe docs.
     """

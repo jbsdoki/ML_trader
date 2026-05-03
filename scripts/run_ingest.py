@@ -17,7 +17,7 @@ Useful links
 ------------
 - ``argparse`` tutorial: https://docs.python.org/3/howto/argparse.html
 - ``python-dotenv``: https://pypi.org/project/python-dotenv/
-- SQLite file location (``ML_TRADER_DATA_DIR``): see ``storage/database.py`` docstring.
+- SQLite file location (``ML_TRADER_DATA_DIR``): see ``src/storage/database.py`` docstring.
 """
 
 from __future__ import annotations
@@ -27,10 +27,11 @@ import logging
 import sys
 from pathlib import Path
 
-# Repo root on sys.path when executing ``python scripts/run_ingest.py``
+# ``src/`` on sys.path when executing ``python scripts/run_ingest.py`` from repo root
 _ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+_SRC = _ROOT / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
 
 def _configure_logging(verbose: bool) -> None:
@@ -61,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
         "--config",
         type=Path,
         default=None,
-        help="YAML file with symbols, start, end, bar_interval, sources (overrides other flags if set).",
+        help="YAML file with symbols, start, end, bar_interval, sources (finnhub, newsapi, alpaca).",
     )
     parser.add_argument(
         "--symbols",
@@ -75,13 +76,13 @@ def main(argv: list[str] | None = None) -> int:
         "--interval",
         type=str,
         default="1d",
-        help="OHLCV bar interval for yfinance/Alpaca (e.g. 1d, 1h)",
+        help="OHLCV bar interval for Alpaca (e.g. 1d, 1h)",
     )
     parser.add_argument(
         "--sources",
         type=str,
-        default="finnhub,newsapi,yfinance,alpaca",
-        help="Comma-separated: finnhub, newsapi, yfinance, alpaca",
+        default="finnhub,newsapi,alpaca",
+        help="Comma-separated: finnhub, newsapi, alpaca",
     )
     parser.add_argument(
         "--newsapi-extra-query",
@@ -161,7 +162,6 @@ def main(argv: list[str] | None = None) -> int:
             bar_interval=args.interval.strip(),
             finnhub=flags["finnhub"],
             newsapi=flags["newsapi"],
-            yfinance=flags["yfinance"],
             alpaca=flags["alpaca"],
             alpaca_feed=args.alpaca_feed,
             newsapi_extra_query=args.newsapi_extra_query,
@@ -176,7 +176,6 @@ def main(argv: list[str] | None = None) -> int:
     print("Ingest summary:")
     print(f"  finnhub_articles_inserted={summary.articles_finnhub_inserted}")
     print(f"  newsapi_articles_inserted={summary.articles_newsapi_inserted}")
-    print(f"  yfinance_bars_inserted={summary.bars_yfinance_inserted}")
     print(f"  alpaca_bars_inserted={summary.bars_alpaca_inserted}")
     print(f"  error_count={len(summary.errors)}")
     for err in summary.errors:

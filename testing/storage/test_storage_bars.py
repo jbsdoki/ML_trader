@@ -17,9 +17,9 @@ def test_upsert_bars_and_fetch_roundtrip(
     sqlite_conn: sqlite3.Connection,
     sample_bars_df: pd.DataFrame,
 ) -> None:
-    inserted = upsert_bars(sqlite_conn, sample_bars_df, "yfinance", "1d")
+    inserted = upsert_bars(sqlite_conn, sample_bars_df, "alpaca", "1d")
     assert inserted == 1
-    out = fetch_bars_frame(sqlite_conn, symbol="AAPL", bar_interval="1d", source_api="yfinance")
+    out = fetch_bars_frame(sqlite_conn, symbol="AAPL", bar_interval="1d", source_api="alpaca")
     assert len(out) == 1
     assert float(out.iloc[0]["close"]) == 181.5
 

@@ -24,7 +24,7 @@ Or YAML:
 python scripts/run_ingest.py --config config.yaml
 ```
 
-- **Sources:** `--sources finnhub,newsapi,yfinance,alpaca` (omit any you do not need). If Yahoo rate-limits you, ingest may still write **Alpaca** bars; training defaults expect **`bars.source_api`** to match what you have (see step 4).
+- **Sources:** `--sources finnhub,newsapi,alpaca` (omit any you do not need). OHLCV bars come from **Alpaca** only; training defaults expect **`bars.source_api`** to match what you ingested (see step 4).
 - Exit code **2** means at least one source/symbol logged an error (partial success is possible).
 
 ## 2. Score sentiment (FinBERT)
@@ -51,7 +51,7 @@ Set `--bar-source` to the vendor you actually have in `bars` (check with SQL in 
 python scripts/train_daily_xgb.py --symbols AAPL --model-id finbert --bar-source alpaca --train-frac 0.8 --save-model data_store/xgb_daily.json
 ```
 
-- **`--bar-source`** must match rows in `bars` for that symbol (e.g. **alpaca** if you have no yfinance rows).
+- **`--bar-source`** must match rows in `bars` for that symbol (typically **alpaca**).
 - Requires enough overlapping **bars + scored sentiment**; otherwise you get “No training rows”.
 
 ## 5. Predict
@@ -80,7 +80,7 @@ python -m pytest testing
 |---------|-------------------|
 | No training rows | `SELECT source_api, COUNT(*) FROM bars WHERE symbol='AAPL' GROUP BY source_api;` — pass `--bar-source` to match. |
 | Model file not found | Training must finish and `--save-model` must run (training failed early if no rows). |
-| yfinance errors | Rate limits; use Alpaca bars or retry later. |
+| Alpaca bars empty | Check API keys, `alpaca_feed`, symbol eligibility, and date range. |
 
 ## Full pipeline (bash)
 

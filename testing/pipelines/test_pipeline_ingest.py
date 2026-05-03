@@ -18,8 +18,8 @@ def test_normalize_symbols_strips_and_uppercases() -> None:
 
 
 def test_parse_sources_csv() -> None:
-    d = parse_sources_csv("finnhub,yfinance")
-    assert d["finnhub"] is True and d["yfinance"] is True
+    d = parse_sources_csv("finnhub,alpaca")
+    assert d["finnhub"] is True and d["alpaca"] is True
     assert d["newsapi"] is False
 
 
@@ -31,20 +31,21 @@ def test_run_ingest_pipeline_no_symbols() -> None:
     assert any("No symbols" in e for e in summary.errors)
 
 
-def test_run_ingest_pipeline_mocks_yfinance(monkeypatch) -> None:
-    def _fake_yf(
+def test_run_ingest_pipeline_mocks_alpaca(monkeypatch) -> None:
+    def _fake_alpaca(
         conn: sqlite3.Connection,
         symbols: list,
         start: str,
         end: str,
         interval: str,
+        feed: str | None,
         summary,
     ) -> None:
-        summary.bars_yfinance_inserted += 2
+        summary.bars_alpaca_inserted += 2
 
     monkeypatch.setattr(
-        "pipelines.ingest_pipeline._ingest_yfinance_bars",
-        _fake_yf,
+        "pipelines.ingest_pipeline._ingest_alpaca_bars",
+        _fake_alpaca,
     )
     cfg = IngestConfig(
         symbols=["AAPL"],
@@ -52,11 +53,10 @@ def test_run_ingest_pipeline_mocks_yfinance(monkeypatch) -> None:
         end="2024-01-10",
         finnhub=False,
         newsapi=False,
-        yfinance=True,
-        alpaca=False,
+        alpaca=True,
     )
     conn = sqlite3.connect(":memory:")
     init_schema(conn)
     summary = run_ingest_pipeline(cfg, conn=conn, init_db=False)
-    assert summary.bars_yfinance_inserted == 2
+    assert summary.bars_alpaca_inserted == 2
     assert summary.errors == []
