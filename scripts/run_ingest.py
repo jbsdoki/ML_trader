@@ -6,9 +6,10 @@ Run from the **repository root** so imports resolve, e.g.::
 
     python scripts/run_ingest.py --symbols AAPL,MSFT --start 2025-01-01 --end 2025-03-18
 
-Or with YAML (requires PyYAML)::
+Or with YAML (requires PyYAML). Optional ``--start``, ``--end``, and ``--symbols``
+override those fields from the file (useful for rolling windows without editing YAML)::
 
-    python scripts/run_ingest.py --config config.yaml
+    python scripts/run_ingest.py --config config.yaml --start 2026-04-02 --end 2026-05-03
 
 **Cron / VPS:** use the venv interpreter and an absolute path; set ``ML_TRADER_DATA_DIR``
 in ``.env`` so the DB path does not depend on cron's working directory.
@@ -147,7 +148,14 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as e:
             logging.exception("Failed to load config: %s", e)
             return 1
-        # Allow CLI to override sources when both given? Keep YAML-only for config path.
+        if args.start:
+            config.start = args.start.strip()[:10]
+        if args.end:
+            config.end = args.end.strip()[:10]
+        if args.symbols:
+            config.symbols = normalize_symbols(
+                [x.strip() for x in args.symbols.split(",") if x.strip()]
+            )
     else:
         if not args.symbols or not args.start or not args.end:
             logging.error("Provide --config PATH or all of --symbols, --start, --end")

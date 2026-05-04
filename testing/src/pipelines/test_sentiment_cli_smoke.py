@@ -15,7 +15,8 @@ from storage.schema import init_schema
 
 
 def _load_run_sentiment_module():
-    root = Path(__file__).resolve().parent.parent.parent
+    # .../testing/src/pipelines/this_file -> repo root is parents[3]
+    root = Path(__file__).resolve().parents[3]
     path = root / "scripts" / "run_sentiment.py"
     spec = importlib.util.spec_from_file_location("run_sentiment_cli", path)
     mod = importlib.util.module_from_spec(spec)

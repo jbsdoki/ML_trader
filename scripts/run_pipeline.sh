@@ -4,9 +4,11 @@
 #
 # Optional environment (defaults align with runbook.md / config.yaml):
 #   PYTHON              Python executable (default: python)
-#   INGEST_CONFIG       YAML path for ingest (default: config.yaml). If this file is missing, SYMBOLS/START/END are used.
+#   INGEST_CONFIG       YAML path for ingest (default: config.yaml). When present, START/END
+#                       still override YAML dates on the ingest CLI (defaults: END=today, START=today-29d).
+#                       If INGEST_CONFIG is missing, SYMBOLS/START/END drive ingest without YAML.
 #   SYMBOLS             Comma-separated tickers (default: AAPL,MSFT)
-#   START, END          Ingest dates YYYY-MM-DD when not using INGEST_CONFIG (default: 2025-01-01, 2025-03-18)
+#   START, END          Ingest window YYYY-MM-DD (defaults: rolling last 30 days via Python)
 #   INTERVAL            Bar interval for CLI ingest (default: 1d)
 #   SENTIMENT_LIMIT     Max articles per sentiment pass (default: 500)
 #   MODEL_ID            Sentiment / training id (default: finbert)
@@ -28,8 +30,9 @@ cd "$REPO_ROOT"
 PYTHON="${PYTHON:-python}"
 
 SYMBOLS="${SYMBOLS:-AAPL,MSFT}"
-START="${START:-2025-01-01}"
-END="${END:-2025-03-18}"
+# Last 30 calendar days inclusive (free NewsAPI tier is often ~30d lookback).
+: "${START:=$("$PYTHON" -c "from datetime import date, timedelta; print((date.today() - timedelta(days=29)).isoformat())")}"
+: "${END:=$("$PYTHON" -c "from datetime import date; print(date.today().isoformat())")}"
 INTERVAL="${INTERVAL:-1d}"
 INGEST_CONFIG="${INGEST_CONFIG:-config.yaml}"
 
@@ -52,7 +55,8 @@ fi
 
 run_ingest() {
   if [[ -f "$INGEST_CONFIG" ]]; then
-    "$PYTHON" scripts/run_ingest.py --config "$INGEST_CONFIG" "${VERBOSE_FLAG[@]}"
+    "$PYTHON" scripts/run_ingest.py --config "$INGEST_CONFIG" \
+      --start "$START" --end "$END" "${VERBOSE_FLAG[@]}"
   else
     "$PYTHON" scripts/run_ingest.py \
       --symbols "$SYMBOLS" --start "$START" --end "$END" --interval "$INTERVAL" \

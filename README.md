@@ -18,7 +18,7 @@ Alternatively create the conda env (Python + SQLite CLI + pip deps) with `conda 
 
 **Operational run order** (ingest through prediction): see **`runbook.md`** in the repo root. SQLite layout and ad hoc queries: **`data_store/readme.md`**.
 
-**One-shot full pipeline (bash):** from the repo root, `bash scripts/run_pipeline.sh` (Git Bash / WSL / Linux). Uses `config.yaml` for ingest when that file exists; otherwise set `SYMBOLS`, `START`, and `END`. Override paths and steps via env vars documented in the script header.
+**One-shot full pipeline (bash):** from the repo root, `bash scripts/run_pipeline.sh` (Git Bash / WSL / Linux). When `config.yaml` exists, ingest still uses rolling `START`/`END` (default last 30 days) to override YAML dates; without it, set `SYMBOLS`, `START`, and `END`. Override paths and steps via env vars documented in the script header.
 
 ---
 
@@ -131,7 +131,7 @@ Ingestion modules stay **separate**; orchestration is **per-stage scripts** or *
 | `src/storage/` | SQLite path, schema, upserts, sentiment reads. |
 | `data_store/` | Default DB directory; see `data_store/readme.md`. |
 | `src/models/` | Model wrappers and factory (e.g. XGBoost). |
-| `testing/` | `pytest` suite (`requirements-dev.txt`); subdirs `data_retrieval/`, `features/`, `pipelines/`, `storage/`. |
+| `testing/` | `pytest` suite (`requirements-dev.txt`); mirrors `src/` under `testing/src/` plus `integration/`, `data_store/`. |
 | `requirements.txt` | Pip dependencies. |
 | `environment.yml` | Conda env (Python + SQLite CLI + pip deps). |
 | `.env.example` | Environment variable template. |

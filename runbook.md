@@ -90,7 +90,7 @@ From the repository root (Git Bash, WSL, or Linux):
 bash scripts/run_pipeline.sh
 ```
 
-Uses `config.yaml` for ingest when present; otherwise set `SYMBOLS`, `START`, and `END` (see comments at the top of `scripts/run_pipeline.sh`). Important variables include `BAR_SOURCE` (default `alpaca`, must match `bars.source_api` in SQLite), `MODEL_OUT`, and optional `SKIP_BUILD_FEATURES`, `SKIP_TRAIN`, `SKIP_PREDICT` for partial runs.
+Uses `config.yaml` for ingest when present (symbols, sources, interval from YAML); `START` and `END` default to a rolling **last 30 days** and are passed on the CLI so they override YAML dates (free NewsAPI lookback). Without `config.yaml`, set `SYMBOLS`, `START`, and `END`. See comments at the top of `scripts/run_pipeline.sh`. Important variables include `BAR_SOURCE` (default `alpaca`, must match `bars.source_api` in SQLite), `MODEL_OUT`, and optional `SKIP_BUILD_FEATURES`, `SKIP_TRAIN`, `SKIP_PREDICT` for partial runs.
 
 ## Related docs
 
